@@ -1,5 +1,6 @@
 import { LeftSidebarSlice } from "@/features/left-sidebar-slice";
 import { RightSidebarSlice } from "@/features/right-sidebar-slice";
+import { TicketSlice } from "@/features/ticket-slice";
 import { xmlSlice } from "@/features/xml-slice";
 import { configureStore } from "@reduxjs/toolkit";
 // ...
@@ -9,6 +10,7 @@ export const store = configureStore({
     leftSide: LeftSidebarSlice.reducer,
     rightSide: RightSidebarSlice.reducer,
     xml: xmlSlice.reducer,
+    ticket: TicketSlice.reducer,
   },
 });
 

@@ -2,25 +2,37 @@ import {
   ChevronLeft,
   ChevronRight,
   InfoIcon,
+  Loader,
   LogOut,
   LogOutIcon,
   UserIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
-import { toggleLeftSidebar } from "@/features/left-sidebar-slice";
-import { toggleRightSidebar } from "@/features/right-sidebar-slice";
-import axios from "axios";
+
 import { appConfig } from "@/config/app-config";
-import { cn } from "@/lib/utils";
 import { useAuthLogout, useUserDetails } from "@/auth/straive-auth";
+import { JobInfoPopover } from "../custom-ui/job-info-popover";
+import { useMutation } from "@tanstack/react-query";
+import { saveTicket, updateTicket } from "@/apis/api";
+import { encode, decode, Base64 } from "js-base64";
+import { xmlToBase64 } from "@/utils/xml-to-base64";
+import { SessionStorage } from "@azure/msal-browser";
 
 const Header = () => {
-  const dispatch = useAppDispatch();
-  const localURL = appConfig.localURL;
-
+  const ticket = useAppSelector((state) => state.ticket);
   const user = useUserDetails();
   const logout = useAuthLogout();
+
+  const { mutate: updateXmlMutate, isPending: isXmlPending } = useMutation({
+    mutationFn: updateTicket,
+    mutationKey: ["updateXml"],
+  });
+
+  const { mutate: saveXmlMutate, isPending } = useMutation({
+    mutationFn: saveTicket,
+    mutationKey: ["updateXml"],
+  });
 
   const handleLogout = () => {
     sessionStorage.removeItem("token");
@@ -30,31 +42,69 @@ const Header = () => {
   };
 
   const xmlContent = useAppSelector((state) => state.xml.xmlContent);
+  const work_request_id = sessionStorage.getItem("work_request_id");
   // const isLeftOpen = useAppSelector((state) => state.leftSide.isLeftBarHide);
   // const isRightOpen = useAppSelector((state) => state.rightSide.isRightBarHide);
 
-  const onSubmitHandler = async () => {
-    const xmlBase64 = btoa(xmlContent);
+  const onSubmitHandler = () => {
+    const xmlBase64 = encode(xmlContent);
+    console.log("xmlBase64", xmlBase64);
 
-    try {
-      const response = await axios.post(`${localURL}/xml/save_xml`, {
-        fileName: "sample.xml",
-        content: xmlBase64, // Crucial: send the Base64 string
-      });
-
-      if (response.status >= 200 && response.status < 300) {
-        console.log("XML content saved successfully:", response.data);
-      } else {
-        const errorData = response.data || response.statusText; // Get error details
-        console.error("Error saving XML content:", errorData);
-        throw new Error(
-          `HTTP error! status: ${response.status}, data: ${errorData}`
-        ); // Re-throw for handling
+    saveXmlMutate(
+      {
+        fileName: ticket?.job_info?.xml_path,
+        content: xmlBase64,
+      },
+      {
+        onSuccess: (data) => {
+          console.log("XML content saved successfully:", data);
+          updateXmlMutate(
+            {
+              ticket_id: ticket.job_info.ticket_id,
+              work_request_id: work_request_id,
+              ticket_time_extend: "1",
+              status: "completed",
+              ticket_start_time: "2025-06-04 12:58:32",
+              ticket_end_time: "2025-06-04 12:59:32",
+              ticket_elapsed_time: "100",
+              remarks: "remarks",
+              waiting_time: "0",
+              conversion_time: "0",
+              user_action: "Manual",
+              user_id: user.username,
+            },
+            {
+              onSuccess: (data) => {
+                console.log("XML content saved successfully:", data);
+              },
+            }
+          );
+        },
+        onError: (error: any) => {
+          console.log("Error saving XML content:", error.message);
+        },
       }
-    } catch (error: any) {
-      console.error("An error occurred:", error.message); // Handle errors outside the axios call
-      // Consider logging the error to a more persistent location (e.g., a database)
-    }
+    );
+  };
+
+  const handleSave = () => {
+    const xmlBase64 = encode(xmlContent);
+    console.log("xmlBase64", xmlBase64);
+
+    saveXmlMutate(
+      {
+        fileName: ticket.job_info.xml_path,
+        content: xmlBase64,
+      },
+      {
+        onSuccess: (data) => {
+          console.log("XML content saved successfully:", data);
+        },
+        onError: (error: any) => {
+          console.log("Error saving XML content:", error.message);
+        },
+      }
+    );
   };
 
   return (
@@ -90,9 +140,27 @@ const Header = () => {
             )}
           />
         </Button>{" "} */}
-        <Button variant="outline">Save</Button>
-        <Button variant="outline" onClick={onSubmitHandler}>
-          Sumit
+        <Button variant="outline" onClick={handleSave} disabled={isPending}>
+          {isPending ? (
+            <>
+              <Loader /> Saving...
+            </>
+          ) : (
+            "Save"
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onSubmitHandler}
+          disabled={isXmlPending}
+        >
+          {isXmlPending ? (
+            <>
+              <Loader /> Submitting...
+            </>
+          ) : (
+            "Submit"
+          )}
         </Button>
 
         {/* <Button size={"icon"} variant="destructive" onClick={handleLogout}>
@@ -105,7 +173,7 @@ const Header = () => {
             <p className="text-white font-bold">{user.name}</p>
           </div>
           <div className="flex items-end  justify-end">
-            <InfoIcon className="text-white cursor-pointer" size={20} />
+            <JobInfoPopover />
           </div>
         </div>
       </div>

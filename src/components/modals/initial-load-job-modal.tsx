@@ -22,18 +22,19 @@ import {
 } from "../ui/select";
 import { useUserDetails } from "@/auth/straive-auth";
 import { useMutation } from "@tanstack/react-query";
-import { getTicket, getWorkRequest } from "@/apis/api";
+import { getTicket, getWorkRequest, getXml } from "@/apis/api";
 import { error } from "console";
 import { useAppDispatch } from "@/redux-store/hook";
 import axios from "axios";
 import { appConfig } from "@/config/app-config";
 import { updateXmlContent } from "@/features/xml-slice";
+import { XmlSkeleton } from "../skeleton/xml-skeleton";
+import { setTicketData } from "@/features/ticket-slice";
 
 export function InitialLoadJobModal() {
   const user = useUserDetails();
   const [isOpen, setIsOpen] = useState(false);
   const dispatch = useAppDispatch();
-  const localURL = appConfig.localURL;
 
   useEffect(() => {
     const work_request_id = sessionStorage.getItem("work_request_id");
@@ -45,14 +46,19 @@ export function InitialLoadJobModal() {
   const token = sessionStorage.getItem("token") ?? "";
   const session_key = sessionStorage.getItem("session_key") ?? "";
 
-  const { mutate, isPending, isError, error } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: getWorkRequest,
     mutationKey: ["getWorkRequest"],
   });
 
-  const { mutate: ticketMutate, isPending: isTicketPending } = useMutation({
+  const { mutate: ticketMutate } = useMutation({
     mutationFn: getTicket,
     mutationKey: ["getTicket"],
+  });
+
+  const { mutate: xmlMutate } = useMutation({
+    mutationFn: getXml,
+    mutationKey: ["getXml"],
   });
 
   const [jobType, setJobType] = useState<string | undefined>(undefined);
@@ -62,33 +68,8 @@ export function InitialLoadJobModal() {
     setIsOpen(false);
   };
 
-  const fetchData = async () => {
-    try {
-      // const response = await axios.get(`${baseUrl}/xml?jobid=${jobId}`);
-      const response = await axios.get(
-        `${localURL}/xml/getxml?fileName=sample.xml`
-      );
-
-      dispatch(updateXmlContent(response.data));
-      // setXmlContent(response.data);
-    } catch (error: any) {
-      if (error.response) {
-        console.error(
-          "Server responded with an error:",
-          error.response.status,
-          error.response.data
-        );
-      } else if (error.request) {
-        console.error("Request made but no response received:", error.request);
-      } else {
-        console.error("Error during setup:", error.message);
-      }
-    }
-  };
-
   const handleSave = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Add your save logic here
     if (isPending) return;
 
     const work_request_id = sessionStorage.getItem("work_request_id");
@@ -109,8 +90,9 @@ export function InitialLoadJobModal() {
         {
           onSuccess: (data) => {
             if (data) {
+              sessionStorage.setItem("job_type", jobType ?? "");
+              sessionStorage.setItem("ticket_type", ticketType ?? "");
               sessionStorage.setItem("work_request_id", data.work_request_id);
-              // fetchData();
 
               const ticketPayload = {
                 user_id: user.username,
@@ -122,11 +104,24 @@ export function InitialLoadJobModal() {
 
               ticketMutate(ticketPayload, {
                 onSuccess: (ticketData) => {
-                  console.log("Ticket mutation successful:", ticketData);
-                  sessionStorage.setItem(
-                    "ticket_id",
-                    ticketData.response.data.ticket_id
-                  );
+                  console.log("Ticket Data:", ticketData.response.data);
+
+                  dispatch(setTicketData(ticketData.response.data));
+
+                  xmlMutate(ticketData?.response?.data?.xml_path, {
+                    onSuccess: (data) => {
+                      if (data) {
+                        const date = new Date();
+                        const curTime = date.toISOString();
+                        sessionStorage.setItem("start_time", curTime);
+                        dispatch(updateXmlContent(data));
+                      }
+                    },
+                    onError: (error: any) => {
+                      console.log(error.message);
+                    },
+                  });
+                  // fetchData();
                 },
                 onError: (ticketError) => {
                   console.error(

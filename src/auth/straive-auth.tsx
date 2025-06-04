@@ -22,7 +22,7 @@ const LogOutContext = React.createContext(() => {}); // logout context with defa
 
 // let newurl = window.location.pathname;
 // let hostname = window.location.hostname;
-const authRedirectUrl = "http://localhost:5173/";
+const authRedirectUrl = "http://localhost:5173/acs_razor";
 
 let finalUrl = authRedirectUrl;
 // newurl.includes("ae/author")

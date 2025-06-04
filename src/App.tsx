@@ -3,54 +3,66 @@ import XmlEditor from "./components/code-editor-area/xml-editor";
 
 import { useUserDetails } from "./auth/straive-auth";
 import { updateXmlContent } from "./features/xml-slice";
-import { useAppDispatch } from "./redux-store/hook";
-import axios from "axios";
-import { appConfig } from "./config/app-config";
+import { useAppDispatch, useAppSelector } from "./redux-store/hook";
 import { useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { getTicket, getWorkRequest, getXml } from "./apis/api";
+import { XmlSkeleton } from "./components/skeleton/xml-skeleton";
+import { setTicketData } from "./features/ticket-slice";
 
 function App() {
-  // const [xmlContent, setXmlContent] = useState("");
-
   const user = useUserDetails();
 
   const dispatch = useAppDispatch();
+  const ticket = useAppSelector((state) => state.ticket);
+  console.log("ticket", ticket?.job_info?.xml_path);
 
-  // console.log(user);
-  const localURL = appConfig.localURL;
+  const work_request_id = sessionStorage.getItem("work_request_id");
+  const jobType = sessionStorage.getItem("job_type");
+  const ticketType = sessionStorage.getItem("ticket_type");
 
-  const queuenam = sessionStorage.getItem("queuename");
+  const { mutate: xmlMutate, isPending: xmlIsPending } = useMutation({
+    mutationFn: getXml,
+    mutationKey: ["getXml"],
+  });
+
+  const { mutate: ticketMutate, isPending: isTicketPending } = useMutation({
+    mutationFn: getTicket,
+    mutationKey: ["getTicket"],
+  });
 
   useEffect(() => {
-    if (queuenam) {
-      const fetchData = async () => {
-        try {
-          // const response = await axios.get(`${baseUrl}/xml?jobid=${jobId}`);
-          const response = await axios.get(
-            `${localURL}/xml/getxml?fileName=sample.xml`
-          );
-
-          dispatch(updateXmlContent(response.data));
-          // setXmlContent(response.data);
-        } catch (error: any) {
-          if (error.response) {
-            console.error(
-              "Server responded with an error:",
-              error.response.status,
-              error.response.data
-            );
-          } else if (error.request) {
-            console.error(
-              "Request made but no response received:",
-              error.request
-            );
-          } else {
-            console.error("Error during setup:", error.message);
-          }
+    if (user && work_request_id) {
+      // Fetch ticket data
+      ticketMutate(
+        {
+          user_id: user.username,
+          email: user.username,
+          work_request_id: work_request_id,
+          job_type: jobType ?? "",
+          ticket_type: ticketType ?? "",
+        },
+        {
+          onSuccess: (data) => {
+            dispatch(setTicketData(data.response.data));
+          },
         }
-      };
-      fetchData();
+      );
     }
-  }, [queuenam]);
+  }, [user, work_request_id]);
+
+  useEffect(() => {
+    if (ticket?.job_info?.xml_path) {
+      xmlMutate(ticket.job_info.xml_path, {
+        onSuccess: (data) => {
+          dispatch(updateXmlContent(data));
+        },
+        onError: (error: any) => {
+          console.log(error.message);
+        },
+      });
+    }
+  }, [ticket.job_info.xml_path]);
 
   // const handleXMLContentChange = (value: string) => {
   //   dispatch(updateXmlContent(value));
@@ -58,9 +70,15 @@ function App() {
 
   return (
     <div className="h-full overflow-auto rounded-2xl">
-      <XmlEditor
-      // onChange={handleXMLContentChange}
-      />
+      {xmlIsPending ? (
+        <div className="p-6">
+          <XmlSkeleton />
+        </div>
+      ) : (
+        <XmlEditor
+        // onChange={handleXMLContentChange}
+        />
+      )}
     </div>
   );
 }
