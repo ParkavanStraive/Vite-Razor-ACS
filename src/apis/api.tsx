@@ -1,10 +1,12 @@
 import { axiosInstance } from "@/lib/axios";
 import {
   getTokenPayloadTypes,
+  TicketPayload,
   WorkRequestPayloadType,
 } from "@/types/payload.types";
 import {
   getTokenResponseType,
+  TicketResponseType,
   WorkRequestResponseType,
 } from "@/types/response.types";
 
@@ -24,5 +26,12 @@ export const getWorkRequest = async (
 ): Promise<WorkRequestResponseType> => {
   const res = await axiosInstance.post(`/xml/get_workrequests`, data);
 
+  return res.data;
+};
+
+export const getTicket = async (
+  data: TicketPayload
+): Promise<TicketResponseType> => {
+  const res = await axiosInstance.post(`/xml/get_ticket`, data);
   return res.data;
 };

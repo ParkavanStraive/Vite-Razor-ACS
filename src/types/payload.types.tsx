@@ -14,5 +14,13 @@ export interface WorkRequestPayloadType {
   session_key: string;
   token: string;
   job_type: string;
-  job_subtype: string;
+  ticket_type: string;
+}
+
+export interface TicketPayload {
+  user_id: string;
+  email: string;
+  work_request_id: string;
+  job_type: string;
+  ticket_type: string;
 }

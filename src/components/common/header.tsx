@@ -1,4 +1,11 @@
-import { ChevronLeft, ChevronRight, InfoIcon, UserIcon } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  InfoIcon,
+  LogOut,
+  LogOutIcon,
+  UserIcon,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
 import { toggleLeftSidebar } from "@/features/left-sidebar-slice";
@@ -6,23 +13,31 @@ import { toggleRightSidebar } from "@/features/right-sidebar-slice";
 import axios from "axios";
 import { appConfig } from "@/config/app-config";
 import { cn } from "@/lib/utils";
-import { useUserDetails } from "@/auth/straive-auth";
+import { useAuthLogout, useUserDetails } from "@/auth/straive-auth";
 
 const Header = () => {
   const dispatch = useAppDispatch();
   const localURL = appConfig.localURL;
 
   const user = useUserDetails();
+  const logout = useAuthLogout();
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("session_key");
+    sessionStorage.removeItem("queuename");
+    logout();
+  };
 
   const xmlContent = useAppSelector((state) => state.xml.xmlContent);
-  const isLeftOpen = useAppSelector((state) => state.leftSide.isLeftBarHide);
-  const isRightOpen = useAppSelector((state) => state.rightSide.isRightBarHide);
+  // const isLeftOpen = useAppSelector((state) => state.leftSide.isLeftBarHide);
+  // const isRightOpen = useAppSelector((state) => state.rightSide.isRightBarHide);
 
   const onSubmitHandler = async () => {
     const xmlBase64 = btoa(xmlContent);
 
     try {
-      const response = await axios.post(`${localURL}/cas_api/xml/save_xml`, {
+      const response = await axios.post(`${localURL}/xml/save_xml`, {
         fileName: "sample.xml",
         content: xmlBase64, // Crucial: send the Base64 string
       });
@@ -79,6 +94,10 @@ const Header = () => {
         <Button variant="outline" onClick={onSubmitHandler}>
           Sumit
         </Button>
+
+        {/* <Button size={"icon"} variant="destructive" onClick={handleLogout}>
+          <LogOutIcon />
+        </Button> */}
 
         <div className="space-y-1">
           <div className="flex items-center gap-2">

@@ -38,10 +38,10 @@ const RootLayout = () => {
                 "session_key",
                 data.result.data.session_key
               );
-              sessionStorage.setItem(
-                "token_created_time",
-                data.result.data.token_created_time
-              );
+              // sessionStorage.setItem(
+              //   "token_created_time",
+              //   data.result.data.token_created_time
+              // );
             }
           },
         }
