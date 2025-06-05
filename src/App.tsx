@@ -5,28 +5,29 @@ import { useUserDetails } from "./auth/straive-auth";
 import { updateXmlContent } from "./features/xml-slice";
 import { useAppDispatch, useAppSelector } from "./redux-store/hook";
 import { useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { getTicket, getWorkRequest, getXml } from "./apis/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { getConversionLog, getTicket, getXml } from "./apis/api";
 import { XmlSkeleton } from "./components/skeleton/xml-skeleton";
 import { setTicketData } from "./features/ticket-slice";
+import { setConversionLog } from "./features/error-slice";
+import { toast } from "sonner";
+import { handleClearTicket } from "./utils/clear-ticket";
+import { setIsJobRequestOpen } from "./features/job-slice";
 
 function App() {
   const user = useUserDetails();
 
   const dispatch = useAppDispatch();
   const ticket = useAppSelector((state) => state.ticket);
-  console.log("ticket", ticket?.job_info?.xml_path);
+
+  const xmlPath = ticket?.job_info?.xml_path;
+  const conversionLogPath = ticket?.job_info?.conversion_log_path;
 
   const work_request_id = sessionStorage.getItem("work_request_id");
   const jobType = sessionStorage.getItem("job_type");
   const ticketType = sessionStorage.getItem("ticket_type");
 
-  const { mutate: xmlMutate, isPending: xmlIsPending } = useMutation({
-    mutationFn: getXml,
-    mutationKey: ["getXml"],
-  });
-
-  const { mutate: ticketMutate, isPending: isTicketPending } = useMutation({
+  const { mutate: ticketMutate } = useMutation({
     mutationFn: getTicket,
     mutationKey: ["getTicket"],
   });
@@ -44,29 +45,80 @@ function App() {
         },
         {
           onSuccess: (data) => {
-            dispatch(setTicketData(data.response.data));
+            if (data) {
+              if (data.response.request_status === "2") {
+                toast("Ticket Status", {
+                  description:
+                    "Tickets are not available for this work request",
+                });
+                handleClearTicket();
+                // setTimeout(() => window.location.reload(), 1000);
+                dispatch(setIsJobRequestOpen(true));
+              }
+              dispatch(setTicketData(data.response.data));
+            }
           },
         }
       );
     }
   }, [user, work_request_id]);
 
+  const {
+    data: xmlData,
+    isPending: xmlIsPending,
+    isSuccess: xmlIsSuccess,
+    error: xmlError,
+    isError: xmlIsError,
+  } = useQuery({
+    queryKey: ["getXml", xmlPath],
+    queryFn: () => getXml(xmlPath),
+    enabled: !!(ticket?.job_info && work_request_id && xmlPath),
+  });
+
   useEffect(() => {
-    if (ticket?.job_info?.xml_path) {
-      xmlMutate(ticket.job_info.xml_path, {
-        onSuccess: (data) => {
-          dispatch(updateXmlContent(data));
-        },
-        onError: (error: any) => {
-          console.log(error.message);
-        },
+    if (xmlIsSuccess && xmlData) {
+      dispatch(updateXmlContent(xmlData));
+    }
+  }, [xmlIsSuccess, xmlData, dispatch]);
+
+  // Side effect for XML error
+  useEffect(() => {
+    if (xmlIsError && xmlError) {
+      console.log("Error fetching XML:", (xmlError as Error).message);
+    }
+  }, [xmlIsError, xmlError]);
+
+  const {
+    data: conversionLogData,
+    // isLoading: logIsLoading,
+    isSuccess: logIsSuccess,
+    error: logError,
+    isError: logIsError,
+  } = useQuery({
+    queryKey: ["getConversionLog", conversionLogPath],
+    queryFn: () => {
+      if (!conversionLogPath) {
+        return Promise.reject(new Error("conversionLogPath is not defined"));
+      }
+      return getConversionLog(conversionLogPath);
+    },
+    enabled: !!(ticket?.job_info && work_request_id && conversionLogPath),
+  });
+
+  useEffect(() => {
+    if (logIsSuccess && conversionLogData) {
+      dispatch(setConversionLog(conversionLogData));
+    }
+  }, [logIsSuccess, conversionLogData]);
+
+  // Side effect for Conversion Log error
+  useEffect(() => {
+    if (logIsError && logError) {
+      toast("Error fetching conversion log:", {
+        description: (logError as Error).message,
       });
     }
-  }, [ticket.job_info.xml_path]);
-
-  // const handleXMLContentChange = (value: string) => {
-  //   dispatch(updateXmlContent(value));
-  // };
+  }, [logIsError, logError]);
 
   return (
     <div className="h-full overflow-auto rounded-2xl">
@@ -75,9 +127,7 @@ function App() {
           <XmlSkeleton />
         </div>
       ) : (
-        <XmlEditor
-        // onChange={handleXMLContentChange}
-        />
+        <XmlEditor />
       )}
     </div>
   );

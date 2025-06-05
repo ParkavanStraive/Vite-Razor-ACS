@@ -103,5 +103,18 @@ export const XmlSkeleton = () => (
       indentLevel={0}
       className="mt-3"
     />
+    <SkeletonXmlElement hasAttributes hasChildren indentLevel={0} />
+    <SkeletonXmlElement
+      tagNameWidth="w-24"
+      hasChildren
+      indentLevel={0}
+      className="mt-3"
+    />
+    <SkeletonXmlElement
+      tagNameWidth="w-28"
+      hasAttributes
+      indentLevel={0}
+      className="mt-3"
+    />
   </>
 );

@@ -1,3 +1,5 @@
+import { ErrorSlice } from "@/features/error-slice";
+import { jobRequestSlice } from "@/features/job-slice";
 import { LeftSidebarSlice } from "@/features/left-sidebar-slice";
 import { RightSidebarSlice } from "@/features/right-sidebar-slice";
 import { TicketSlice } from "@/features/ticket-slice";
@@ -11,6 +13,8 @@ export const store = configureStore({
     rightSide: RightSidebarSlice.reducer,
     xml: xmlSlice.reducer,
     ticket: TicketSlice.reducer,
+    xmlErrors: ErrorSlice.reducer,
+    jobRequest: jobRequestSlice.reducer,
   },
 });
 

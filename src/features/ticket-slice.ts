@@ -1,4 +1,3 @@
-import { RootState } from "@/redux-store/store";
 import { createSlice } from "@reduxjs/toolkit";
 
 interface ITicketType {

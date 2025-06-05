@@ -2,13 +2,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormEvent, useEffect, useState } from "react";
 import {
@@ -16,30 +13,28 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
 import { useUserDetails } from "@/auth/straive-auth";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getTicket, getWorkRequest, getXml } from "@/apis/api";
-import { error } from "console";
-import { useAppDispatch } from "@/redux-store/hook";
-import axios from "axios";
-import { appConfig } from "@/config/app-config";
+import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
 import { updateXmlContent } from "@/features/xml-slice";
-import { XmlSkeleton } from "../skeleton/xml-skeleton";
 import { setTicketData } from "@/features/ticket-slice";
+import { setIsJobRequestOpen } from "@/features/job-slice";
 
 export function InitialLoadJobModal() {
+  const { isJobRequestOpen } = useAppSelector((state) => state.jobRequest);
   const user = useUserDetails();
-  const [isOpen, setIsOpen] = useState(false);
   const dispatch = useAppDispatch();
+  const ticket = useAppSelector((state) => state.ticket);
+  const xmlPath = ticket?.job_info?.xml_path;
 
   useEffect(() => {
     const work_request_id = sessionStorage.getItem("work_request_id");
     if (work_request_id === null || work_request_id === "work_request_id") {
-      setIsOpen(true);
+      dispatch(setIsJobRequestOpen(true));
     }
   }, []);
 
@@ -56,16 +51,36 @@ export function InitialLoadJobModal() {
     mutationKey: ["getTicket"],
   });
 
-  const { mutate: xmlMutate } = useMutation({
-    mutationFn: getXml,
-    mutationKey: ["getXml"],
+  const {
+    data: xmlData,
+    // isPending: xmlIsPending,
+    isSuccess: xmlIsSuccess,
+    error: xmlError,
+    isError: xmlIsError,
+  } = useQuery({
+    queryKey: ["getXml", xmlPath],
+    queryFn: () => getXml(xmlPath),
+    enabled: !!(ticket?.job_info && xmlPath),
   });
+
+  useEffect(() => {
+    if (xmlIsSuccess && xmlData) {
+      dispatch(updateXmlContent(xmlData));
+    }
+  }, [xmlIsSuccess, xmlData, dispatch]);
+
+  // Side effect for XML error
+  useEffect(() => {
+    if (xmlIsError && xmlError) {
+      console.log("Error fetching XML:", (xmlError as Error).message);
+    }
+  }, [xmlIsError, xmlError]);
 
   const [jobType, setJobType] = useState<string | undefined>(undefined);
   const [ticketType, setTicketType] = useState<string | undefined>(undefined);
 
   const handleClose = () => {
-    setIsOpen(false);
+    dispatch(setIsJobRequestOpen(false));
   };
 
   const handleSave = (e: FormEvent<HTMLFormElement>) => {
@@ -104,24 +119,7 @@ export function InitialLoadJobModal() {
 
               ticketMutate(ticketPayload, {
                 onSuccess: (ticketData) => {
-                  console.log("Ticket Data:", ticketData.response.data);
-
                   dispatch(setTicketData(ticketData.response.data));
-
-                  xmlMutate(ticketData?.response?.data?.xml_path, {
-                    onSuccess: (data) => {
-                      if (data) {
-                        const date = new Date();
-                        const curTime = date.toISOString();
-                        sessionStorage.setItem("start_time", curTime);
-                        dispatch(updateXmlContent(data));
-                      }
-                    },
-                    onError: (error: any) => {
-                      console.log(error.message);
-                    },
-                  });
-                  // fetchData();
                 },
                 onError: (ticketError) => {
                   console.error(
@@ -130,6 +128,9 @@ export function InitialLoadJobModal() {
                   );
                 },
               });
+
+              setJobType("");
+              setTicketType("");
             }
           },
           onError: (error) => {
@@ -142,7 +143,7 @@ export function InitialLoadJobModal() {
     handleClose();
   };
 
-  if (!isOpen) return null;
+  if (!isJobRequestOpen) return null;
 
   const handleJobTypeChange = (value: string) => {
     setJobType(value);
@@ -153,7 +154,7 @@ export function InitialLoadJobModal() {
   };
 
   return (
-    <Dialog open={isOpen}>
+    <Dialog open={isJobRequestOpen}>
       {/* <DialogTrigger asChild>
         <Button variant="outline">Edit Profile</Button>
       </DialogTrigger> */}

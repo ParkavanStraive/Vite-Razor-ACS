@@ -7,6 +7,7 @@ import AuthProvider from "./auth/straive-auth.tsx";
 import { Provider } from "react-redux";
 import { store } from "./redux-store/store.tsx";
 import { QueryProvider } from "./context/query-provider.tsx";
+import { Toaster } from "./components/ui/sonner.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <QueryProvider>
           <RouterProvider router={router} />
+          <Toaster />
         </QueryProvider>
       </AuthProvider>
     </Provider>

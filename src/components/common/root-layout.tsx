@@ -6,12 +6,11 @@ import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { getToken } from "@/apis/api";
 import { useUserDetails } from "@/auth/straive-auth";
-import { axiosInstance } from "@/lib/axios";
 
 const RootLayout = () => {
   const user = useUserDetails();
 
-  const { mutate, isPending, isError, error } = useMutation({
+  const { mutate } = useMutation({
     mutationFn: getToken,
     mutationKey: ["getToken"],
   });

@@ -15,6 +15,7 @@ import {
   useMsal,
 } from "@azure/msal-react";
 import { PublicClientApplication, InteractionType } from "@azure/msal-browser";
+import { authRedirectUrl } from "@/utils/constants";
 // import { authRedirectUrl } from "../../api";
 // import { authRedirectUrl, hapRedirectUrl } from "../../api";
 
@@ -22,7 +23,7 @@ const LogOutContext = React.createContext(() => {}); // logout context with defa
 
 // let newurl = window.location.pathname;
 // let hostname = window.location.hostname;
-const authRedirectUrl = "http://localhost:5173/acs_razor";
+// const authRedirectUrl = "http://localhost:5173/acs_razor";
 
 let finalUrl = authRedirectUrl;
 // newurl.includes("ae/author")

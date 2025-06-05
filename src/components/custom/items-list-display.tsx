@@ -2,10 +2,11 @@
 
 import { cn } from "@/lib/utils";
 import { ArrowDown } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 type ItemListDisplayProps = {
-  items: Record<string, unknown>;
+  // items: Record<string, unknown>;
+  items: any;
   title: string;
   themeColor?: string;
   defaultExpanded?: boolean;

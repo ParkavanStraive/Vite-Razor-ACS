@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -25,21 +23,21 @@ export function JobInfoPopover() {
           onMouseLeave={() => setIsOpen(false)}
         />
       </PopoverTrigger>
-      <PopoverContent className="w-70">
-        <div className="grid grid-cols-1">
-          <div className="flex items-center gap-4">
+      <PopoverContent className="w-50">
+        <div className="grid">
+          <div className="grid grid-cols-2">
             <Label className="text-sm font-semibold">Job Id : </Label>
             <span>{ticket?.job_info?.job_id}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="grid grid-cols-2">
             <Label className="text-sm font-semibold">Job Type : </Label>
             <span>{ticket?.job_info?.job_type}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="grid grid-cols-2">
             <Label className="text-sm font-semibold">Ticket Id : </Label>
-            <span>{ticket?.job_info?.ticket_id}</span>
+            <span className="text-wrap">{ticket?.job_info?.ticket_id}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="grid grid-cols-2">
             <Label className="text-sm font-semibold">Job Id: </Label>
             <span>{ticket?.job_info?.ticket_type}</span>
           </div>

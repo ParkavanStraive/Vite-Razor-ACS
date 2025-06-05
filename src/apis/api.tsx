@@ -15,14 +15,15 @@ export const getXml = async (fileName: string) => {
   return res.data;
 };
 
+export const getConversionLog = async (fileName: string) => {
+  const res = await axiosInstance.get(`/xml/getxml?fileName=${fileName}`);
+  return res.data;
+};
+
 export const getToken = async (
   data: getTokenPayloadTypes
 ): Promise<getTokenResponseType> => {
-  const res = await axiosInstance.post(
-    // `/acs_razor/api/webservices.php/gettoken`,
-    `/xml/get_token`,
-    data
-  );
+  const res = await axiosInstance.post(`/xml/get_token`, data);
   return res.data;
 };
 
