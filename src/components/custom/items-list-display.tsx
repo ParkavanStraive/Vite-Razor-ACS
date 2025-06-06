@@ -1,6 +1,8 @@
 // components/ItemListDisplay.js
 
+import { setNavigationTarget } from "@/features/error-navigation-slice";
 import { cn } from "@/lib/utils";
+import { useAppDispatch } from "@/redux-store/hook";
 import { ArrowDown } from "lucide-react";
 import { useState } from "react";
 
@@ -18,6 +20,7 @@ const ItemListDisplay = ({
   defaultExpanded = false,
 }: ItemListDisplayProps) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const dispatch = useAppDispatch();
 
   if (!items || Object.keys(items).length === 0) {
     return (
@@ -32,6 +35,33 @@ const ItemListDisplay = ({
   };
 
   const itemCount = Object.keys(items).length;
+
+  const handleErrorPostionExtractor = (message: string) => {
+    const pattern = /(\d+):(\d+)/;
+
+    // 3. Use JavaScript's .match() method to find the pattern in the message
+    const match = message.match(pattern);
+
+    // 4. Check if a match was found
+    if (match) {
+      // upd
+    }
+  };
+
+  const handleNavigateClick = (message: string) => {
+    const pattern = /(\d+):(\d+)/;
+
+    const match = message.match(pattern);
+
+    if (match) {
+      dispatch(
+        setNavigationTarget({
+          line: parseInt(match[1], 10),
+          char: parseInt(match[2], 10),
+        })
+      );
+    }
+  };
 
   return (
     <div className="mt-4">
@@ -60,8 +90,9 @@ const ItemListDisplay = ({
           <div
             key={itemKey}
             className="mb-2 p-1 rounded bg-white shadow-sm text-xs"
+            onClick={() => handleNavigateClick(String(itemValue))}
           >
-            <p className="text-gray-800">{String(itemValue)}</p>
+            <p className="text-gray-800 break-all">{String(itemValue)}</p>
           </div>
         ))}
       </div>

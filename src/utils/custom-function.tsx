@@ -103,3 +103,15 @@ export const extractData_spix_ts = (
     return { success: false, result: errorMessage };
   }
 };
+
+export const extractData_parser = (arr: string[]): string[] => {
+  const final: string[] = [];
+
+  for (const ele of arr) {
+    if (ele.trim() !== "") {
+      final.push(ele);
+    }
+  }
+
+  return final;
+};

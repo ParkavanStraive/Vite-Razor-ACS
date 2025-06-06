@@ -6,10 +6,14 @@ import { updateXmlContent } from "./features/xml-slice";
 import { useAppDispatch, useAppSelector } from "./redux-store/hook";
 import { useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getConversionLog, getTicket, getXml } from "./apis/api";
-import { XmlSkeleton } from "./components/skeleton/xml-skeleton";
+import { getConversionLog, getLogFile, getTicket, getXml } from "./apis/api";
+import { XmlSkeleton } from "./components/custom-ui/skeleton/xml-skeleton";
 import { setTicketData } from "./features/ticket-slice";
-import { setConversionLog } from "./features/error-slice";
+import {
+  setConversionLog,
+  setParserLogError,
+  setSpixLogError,
+} from "./features/error-slice";
 import { toast } from "sonner";
 import { handleClearTicket } from "./utils/clear-ticket";
 import { setIsJobRequestOpen } from "./features/job-slice";
@@ -18,14 +22,20 @@ function App() {
   const user = useUserDetails();
 
   const dispatch = useAppDispatch();
-  const ticket = useAppSelector((state) => state.ticket);
 
+  const ticket = useAppSelector((state) => state.ticket);
   const xmlPath = ticket?.job_info?.xml_path;
-  const conversionLogPath = ticket?.job_info?.conversion_log_path;
+
+  // const conversionLogPath = ticket?.job_info?.conversion_log_path;
 
   const work_request_id = sessionStorage.getItem("work_request_id");
   const jobType = sessionStorage.getItem("job_type");
   const ticketType = sessionStorage.getItem("ticket_type");
+
+  // const { mutate: logFileMutate } = useMutation({
+  //   mutationFn: getLogFile,
+  //   mutationKey: ["getLogFile"],
+  // });
 
   const { mutate: ticketMutate } = useMutation({
     mutationFn: getTicket,
@@ -37,8 +47,8 @@ function App() {
       // Fetch ticket data
       ticketMutate(
         {
-          user_id: user.username,
-          email: user.username,
+          user_id: user?.username,
+          email: user?.username,
           work_request_id: work_request_id,
           job_type: jobType ?? "",
           ticket_type: ticketType ?? "",
@@ -62,6 +72,27 @@ function App() {
       );
     }
   }, [user, work_request_id]);
+
+  // useEffect(() => {
+  //   if (xmlPath && work_request_id) {
+  //     logFileMutate(
+  //       {
+  //         xml: xmlPath,
+  //         logType: ticketType,
+  //       },
+  //       {
+  //         onSuccess: (data) => {
+  //           // console.log(data);
+  //           if (ticketType === "spix") {
+  //             dispatch(setSpixLogError(data));
+  //           } else {
+  //             dispatch(setParserLogError(data));
+  //           }
+  //         },
+  //       }
+  //     );
+  //   }
+  // }, [xmlPath && work_request_id]);
 
   const {
     data: xmlData,
@@ -88,37 +119,41 @@ function App() {
     }
   }, [xmlIsError, xmlError]);
 
-  const {
-    data: conversionLogData,
-    // isLoading: logIsLoading,
-    isSuccess: logIsSuccess,
-    error: logError,
-    isError: logIsError,
-  } = useQuery({
-    queryKey: ["getConversionLog", conversionLogPath],
-    queryFn: () => {
-      if (!conversionLogPath) {
-        return Promise.reject(new Error("conversionLogPath is not defined"));
-      }
-      return getConversionLog(conversionLogPath);
-    },
-    enabled: !!(ticket?.job_info && work_request_id && conversionLogPath),
-  });
+  // const {
+  //   data: conversionLogData,
+  //   // isLoading: logIsLoading,
+  //   isSuccess: logIsSuccess,
+  //   error: logError,
+  //   isError: logIsError,
+  // } = useQuery({
+  //   queryKey: ["getConversionLog", conversionLogPath],
+  //   queryFn: () => {
+  //     if (!conversionLogPath) {
+  //       return Promise.reject(new Error("conversionLogPath is not defined"));
+  //     }
+  //     return getConversionLog(conversionLogPath);
+  //   },
+  //   enabled: !!(
+  //     ticket?.job_info &&
+  //     work_request_id &&
+  //     conversionLogPath &&
+  //     ticketType === "xml_conversion"
+  //   ),
+  // });
 
-  useEffect(() => {
-    if (logIsSuccess && conversionLogData) {
-      dispatch(setConversionLog(conversionLogData));
-    }
-  }, [logIsSuccess, conversionLogData]);
+  // useEffect(() => {
+  //   if (logIsSuccess && conversionLogData) {
+  //     dispatch(setConversionLog(conversionLogData));
+  //   }
+  // }, [logIsSuccess, conversionLogData]);
 
-  // Side effect for Conversion Log error
-  useEffect(() => {
-    if (logIsError && logError) {
-      toast("Error fetching conversion log:", {
-        description: (logError as Error).message,
-      });
-    }
-  }, [logIsError, logError]);
+  // useEffect(() => {
+  //   if (logIsError && logError) {
+  //     toast("Error fetching conversion log:", {
+  //       description: (logError as Error).message,
+  //     });
+  //   }
+  // }, [logIsError, logError]);
 
   return (
     <div className="h-full overflow-auto rounded-2xl">

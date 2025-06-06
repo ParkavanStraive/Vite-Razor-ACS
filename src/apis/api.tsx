@@ -51,3 +51,18 @@ export const updateTicket = async (data: any) => {
   const res = await axiosInstance.post(`/xml/update_ticket`, data);
   return res.data;
 };
+
+export const validateParser = async (data: any) => {
+  const res = await axiosInstance.post(`/xml/validate/parser`, data);
+  return res.data;
+};
+
+export const validateSpix = async (data: any) => {
+  const res = await axiosInstance.post(`/xml/validate/spix`, data);
+  return res.data;
+};
+
+export const getLogFile = async (data: any) => {
+  const res = await axiosInstance.post(`/xml/getLogFile`, data);
+  return res.data;
+};

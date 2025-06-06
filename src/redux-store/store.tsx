@@ -1,3 +1,5 @@
+// import { CodeMirrorSlice } from "@/features/code-mirror-slice";
+import { navigationSlice } from "@/features/error-navigation-slice";
 import { ErrorSlice } from "@/features/error-slice";
 import { jobRequestSlice } from "@/features/job-slice";
 import { LeftSidebarSlice } from "@/features/left-sidebar-slice";
@@ -15,6 +17,8 @@ export const store = configureStore({
     ticket: TicketSlice.reducer,
     xmlErrors: ErrorSlice.reducer,
     jobRequest: jobRequestSlice.reducer,
+    // codeMirror: CodeMirrorSlice.reducer,
+    lineCharNavigation: navigationSlice.reducer,
   },
 });
 

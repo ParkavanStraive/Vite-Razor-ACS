@@ -6,22 +6,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
+import { useAppSelector } from "@/redux-store/hook";
 
 import { useUserDetails } from "@/auth/straive-auth";
 import { JobInfoPopover } from "../custom-ui/job-info-popover";
 import { useMutation } from "@tanstack/react-query";
-import { getTicket, saveTicket, updateTicket } from "@/apis/api";
+import {
+  saveTicket,
+  updateTicket,
+  validateParser,
+  validateSpix,
+} from "@/apis/api";
 import { encode } from "js-base64";
 import { toast } from "sonner";
 import { handleClearTicket } from "@/utils/clear-ticket";
-import { setTicketData } from "@/features/ticket-slice";
-import { setIsJobRequestOpen } from "@/features/job-slice";
+import Razor_Logo from "../../assets/logos/RAZOR_slogo.png";
 
 const Header = () => {
   const ticket = useAppSelector((state) => state.ticket);
   const user = useUserDetails();
-  const dispatch = useAppDispatch();
+
+  // const xmlPath = ticket?.job_info?.xml_path;
 
   const { mutate: updateXmlMutate, isPending: isXmlPending } = useMutation({
     mutationFn: updateTicket,
@@ -33,24 +38,19 @@ const Header = () => {
     mutationKey: ["updateXml"],
   });
 
-  const { mutate: ticketMutate } = useMutation({
-    mutationFn: getTicket,
-    mutationKey: ["getTicket"],
+  const { mutate: parserMutate, isPending: isParserValidatePending } =
+    useMutation({
+      mutationFn: validateParser,
+      mutationKey: ["validateParser"],
+    });
+
+  const { mutate: spixMutate, isPending: isSpixValidatePending } = useMutation({
+    mutationFn: validateSpix,
+    mutationKey: ["validateSpix"],
   });
 
   const work_request_id = sessionStorage.getItem("work_request_id");
-  const jobType = sessionStorage.getItem("job_type");
   const ticketType = sessionStorage.getItem("ticket_type");
-
-  // const handleLogout = () => {
-  //   sessionStorage.removeItem("token");
-  //   sessionStorage.removeItem("session_key");
-  //   sessionStorage.removeItem("queuename");
-  //   sessionStorage.removeItem("job_type");
-  //   sessionStorage.removeItem("ticket_type");
-  //   sessionStorage.removeItem("work_request_id");
-  //   window.location.reload();
-  // };
 
   const xmlContent = useAppSelector((state) => state.xml.xmlContent);
 
@@ -67,6 +67,9 @@ const Header = () => {
           toast("Ticket Status", {
             description: "Ticket has been saved",
           });
+
+          const endTime = new Date().toISOString();
+          sessionStorage.setItem("ticket_end_time", endTime);
 
           updateXmlMutate(
             {
@@ -88,41 +91,19 @@ const Header = () => {
                 toast("Ticket Status", {
                   description: "Ticket has been submitted",
                 });
-
-                ticketMutate(
-                  {
-                    user_id: user.username,
-                    email: user.username,
-                    work_request_id: work_request_id ?? "",
-                    job_type: jobType ?? "",
-                    ticket_type: ticketType ?? "",
-                  },
-                  {
-                    onSuccess: (data) => {
-                      console.log("Ticket data:", data);
-                      if (data && data.response.request_status === "2") {
-                        toast("Ticket Status", {
-                          description:
-                            "Tickets are not available for this work request",
-                        });
-                      }
-
-                      dispatch(setTicketData(data.response.data));
-                    },
-                  }
-                );
               },
-              onError: (error: any) => {
-                console.error(
-                  "Error in ticket mutation (getTicket):",
-                  error.message
-                );
+              onError: () => {
+                toast("Ticket Status", {
+                  description: `Something wrong, Please try again later`,
+                });
               },
             }
           );
         },
-        onError: (error: any) => {
-          console.log("Error saving XML content:", error.message);
+        onError: () => {
+          toast("Ticket Status", {
+            description: `Something wrong, Please try again later`,
+          });
         },
       }
     );
@@ -143,71 +124,119 @@ const Header = () => {
             description: "Ticket has been saved",
           });
         },
-        onError: (error: any) => {
-          console.log("Error saving XML content:", error.message);
+        onError: () => {
+          toast("Ticket Status", {
+            description: `Something wrong, Please try again later`,
+          });
         },
       }
     );
   };
 
+  const handleValidate = () => {
+    const ticketType = sessionStorage.getItem("ticket_type");
+
+    if (ticketType === "parser") {
+      parserMutate(
+        {
+          xml: ticket.job_info.xml_path,
+        },
+        {
+          onSuccess: () => {},
+        }
+      );
+    } else {
+      spixMutate(
+        {
+          xml: ticket.job_info.xml_path,
+          clientName: "ACS",
+          stage: "ED",
+        },
+        {
+          onSuccess: () => {},
+        }
+      );
+    }
+  };
+
   return (
     <div className="flex items-center justify-between h-full p-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="w-32 h-12 rounded-md drop-shadow-2xl bg-white border flex items-center justify-center">
-          <h1 className="text-2xl font-bold">Razor-ACS</h1>
+      <div className="flex items-center justify-between gap-2 p-2">
+        <div className="w-[80px] h-[50] rounded-md drop-shadow-2xl bg-white border flex items-center justify-center">
+          {/* <h1 className="text-2xl font-bold">Razor-ACS</h1> */}
+          <img src={Razor_Logo} alt="#Razor_Logo" width={90} />
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline">Validate</Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Validate (WIP)</p>
-          </TooltipContent>
-        </Tooltip>
+        {(ticketType === "parser" || ticketType === "spix") && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={handleValidate}
+                disabled={isParserValidatePending || isSpixValidatePending}
+              >
+                {isParserValidatePending || isSpixValidatePending ? (
+                  <>
+                    <Loader className="animate-spin" /> Validating...
+                  </>
+                ) : (
+                  "Validate"
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Validate (WIP)</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size={"icon"}>
-              <TimerIcon />
+        {ticket?.job_info?.job_id && ticket?.job_info?.ticket_id && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size={"icon"}>
+                  <TimerIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Extend time (WIP)</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Button variant="outline" onClick={handleSave} disabled={isPending}>
+              {isPending ? (
+                <>
+                  <Loader className="animate-spin" /> Saving...
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Extend time (WIP)</p>
-          </TooltipContent>
-        </Tooltip>
-
-        <Button variant="outline" onClick={handleSave} disabled={isPending}>
-          {isPending ? (
-            <>
-              <Loader /> Saving...
-            </>
-          ) : (
-            "Save"
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={onSubmitHandler}
-          disabled={isXmlPending}
-        >
-          {isXmlPending ? (
-            <>
-              <Loader /> Submitting...
-            </>
-          ) : (
-            "Submit"
-          )}
-        </Button>
+            <Button
+              variant="outline"
+              onClick={onSubmitHandler}
+              disabled={isXmlPending}
+            >
+              {isXmlPending ? (
+                <>
+                  <Loader className="animate-spin" /> Submitting...
+                </>
+              ) : (
+                "Submit"
+              )}
+            </Button>
+          </>
+        )}
         <Button
           size={"icon"}
           variant="destructive"
           onClick={() => {
             handleClearTicket();
-            dispatch(setIsJobRequestOpen(true));
-            // window.location.reload();
+            // dispatch(updateXmlContent(""));
+            // dispatch(setIsJobRequestOpen(true));
+            window.location.reload();
           }}
         >
           <LogOutIcon />
@@ -217,9 +246,11 @@ const Header = () => {
             <UserIcon className="text-white" size={20} />
             <p className="text-white font-bold">{user.name}</p>
           </div>
-          <div className="flex items-end  justify-end">
-            <JobInfoPopover />
-          </div>
+          {ticket?.job_info?.job_id && (
+            <div className="flex items-end  justify-end">
+              <JobInfoPopover />
+            </div>
+          )}
         </div>
       </div>
     </div>

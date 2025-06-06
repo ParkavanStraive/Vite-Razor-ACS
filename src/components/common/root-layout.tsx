@@ -2,51 +2,9 @@ import Footer from "./footer";
 import Header from "./header";
 import BothSidebars from "./both-sidebars";
 import { InitialLoadJobModal } from "../modals/initial-load-job-modal";
-import { useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { getToken } from "@/apis/api";
-import { useUserDetails } from "@/auth/straive-auth";
 
 const RootLayout = () => {
-  const user = useUserDetails();
-
-  const { mutate } = useMutation({
-    mutationFn: getToken,
-    mutationKey: ["getToken"],
-  });
-
-  useEffect(() => {
-    // Only fetch token if user data is available.
-
-    const token = sessionStorage.getItem("token");
-    const session_key = sessionStorage.getItem("session_key");
-    if (user && !token && !session_key) {
-      mutate(
-        {
-          user_id: user.username,
-          project_name: "acs_razor",
-          access_token: "EMG9WDUvV2JrCi49fklVjx54T",
-          api_name: "workrequest",
-        },
-        {
-          onSuccess: (data) => {
-            if (data) {
-              // Add a check here
-              sessionStorage.setItem("token", data.result.data.token);
-              sessionStorage.setItem(
-                "session_key",
-                data.result.data.session_key
-              );
-              // sessionStorage.setItem(
-              //   "token_created_time",
-              //   data.result.data.token_created_time
-              // );
-            }
-          },
-        }
-      );
-    }
-  }, [user, mutate]);
+  const work_request_id = sessionStorage.getItem("work_request_id");
 
   return (
     <div className="w-full h-screen">
@@ -62,7 +20,7 @@ const RootLayout = () => {
         <Footer />
       </div>
 
-      <InitialLoadJobModal />
+      {!work_request_id && <InitialLoadJobModal />}
     </div>
   );
 };

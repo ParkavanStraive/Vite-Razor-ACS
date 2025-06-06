@@ -17,19 +17,20 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useUserDetails } from "@/auth/straive-auth";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getTicket, getWorkRequest, getXml } from "@/apis/api";
+import { useMutation } from "@tanstack/react-query";
+import { getTicket, getToken, getWorkRequest } from "@/apis/api";
 import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
-import { updateXmlContent } from "@/features/xml-slice";
 import { setTicketData } from "@/features/ticket-slice";
 import { setIsJobRequestOpen } from "@/features/job-slice";
+import { toast } from "sonner";
+import { handleClearTicket } from "@/utils/clear-ticket";
 
 export function InitialLoadJobModal() {
   const { isJobRequestOpen } = useAppSelector((state) => state.jobRequest);
   const user = useUserDetails();
   const dispatch = useAppDispatch();
-  const ticket = useAppSelector((state) => state.ticket);
-  const xmlPath = ticket?.job_info?.xml_path;
+  // const ticket = useAppSelector((state) => state.ticket);
+  // const xmlPath = ticket?.job_info?.xml_path;
 
   useEffect(() => {
     const work_request_id = sessionStorage.getItem("work_request_id");
@@ -51,30 +52,35 @@ export function InitialLoadJobModal() {
     mutationKey: ["getTicket"],
   });
 
-  const {
-    data: xmlData,
-    // isPending: xmlIsPending,
-    isSuccess: xmlIsSuccess,
-    error: xmlError,
-    isError: xmlIsError,
-  } = useQuery({
-    queryKey: ["getXml", xmlPath],
-    queryFn: () => getXml(xmlPath),
-    enabled: !!(ticket?.job_info && xmlPath),
+  const { mutate: getTokenMutate } = useMutation({
+    mutationFn: getToken,
+    mutationKey: ["getToken"],
   });
 
-  useEffect(() => {
-    if (xmlIsSuccess && xmlData) {
-      dispatch(updateXmlContent(xmlData));
-    }
-  }, [xmlIsSuccess, xmlData, dispatch]);
+  // const {
+  //   data: xmlData,
+  //   // isPending: xmlIsPending,
+  //   isSuccess: xmlIsSuccess,
+  //   error: xmlError,
+  //   isError: xmlIsError,
+  // } = useQuery({
+  //   queryKey: ["getXml", xmlPath],
+  //   queryFn: () => getXml(xmlPath),
+  //   enabled: !!(ticket?.job_info && xmlPath),
+  // });
 
-  // Side effect for XML error
-  useEffect(() => {
-    if (xmlIsError && xmlError) {
-      console.log("Error fetching XML:", (xmlError as Error).message);
-    }
-  }, [xmlIsError, xmlError]);
+  // useEffect(() => {
+  //   if (xmlIsSuccess && xmlData) {
+  //     dispatch(updateXmlContent(xmlData));
+  //   }
+  // }, [xmlIsSuccess, xmlData, dispatch]);
+
+  // // Side effect for XML error
+  // useEffect(() => {
+  //   if (xmlIsError && xmlError) {
+  //     console.log("Error fetching XML:", (xmlError as Error).message);
+  //   }
+  // }, [xmlIsError, xmlError]);
 
   const [jobType, setJobType] = useState<string | undefined>(undefined);
   const [ticketType, setTicketType] = useState<string | undefined>(undefined);
@@ -89,52 +95,89 @@ export function InitialLoadJobModal() {
 
     const work_request_id = sessionStorage.getItem("work_request_id");
 
-    if (!work_request_id) {
-      mutate(
+    if (user && !work_request_id && !token && !session_key) {
+      getTokenMutate(
         {
           user_id: user.username,
-          email: user.username,
           project_name: "acs_razor",
-          api_name: "workrequest",
           access_token: "EMG9WDUvV2JrCi49fklVjx54T",
-          session_key,
-          token,
-          job_type: jobType ?? "",
-          ticket_type: ticketType ?? "",
+          api_name: "workrequest",
         },
         {
           onSuccess: (data) => {
             if (data) {
-              sessionStorage.setItem("job_type", jobType ?? "");
-              sessionStorage.setItem("ticket_type", ticketType ?? "");
-              sessionStorage.setItem("work_request_id", data.work_request_id);
+              sessionStorage.setItem("token", data.result.data.token);
+              sessionStorage.setItem(
+                "session_key",
+                data.result.data.session_key
+              );
+            }
 
-              const ticketPayload = {
+            mutate(
+              {
                 user_id: user.username,
                 email: user.username,
-                work_request_id: data.work_request_id,
+                project_name: "acs_razor",
+                api_name: "workrequest",
+                access_token: "EMG9WDUvV2JrCi49fklVjx54T",
+                session_key: data.result.data.session_key,
+                token: data.result.data.token,
                 job_type: jobType ?? "",
                 ticket_type: ticketType ?? "",
-              };
+              },
+              {
+                onSuccess: (data) => {
+                  if (data) {
+                    sessionStorage.setItem("job_type", jobType ?? "");
+                    sessionStorage.setItem("ticket_type", ticketType ?? "");
+                    sessionStorage.setItem(
+                      "work_request_id",
+                      data.work_request_id
+                    );
 
-              ticketMutate(ticketPayload, {
-                onSuccess: (ticketData) => {
-                  dispatch(setTicketData(ticketData.response.data));
-                },
-                onError: (ticketError) => {
-                  console.error(
-                    "Error in ticket mutation (getTicket):",
-                    ticketError
-                  );
-                },
-              });
+                    const ticketPayload = {
+                      user_id: user.username,
+                      email: user.username,
+                      work_request_id: data.work_request_id,
+                      job_type: jobType ?? "",
+                      ticket_type: ticketType ?? "",
+                    };
 
-              setJobType("");
-              setTicketType("");
-            }
-          },
-          onError: (error) => {
-            console.log("Error fetching work request:", error);
+                    ticketMutate(ticketPayload, {
+                      onSuccess: (ticketData) => {
+                        if (ticketData.response.request_status === "2") {
+                          toast("Ticket Status", {
+                            description:
+                              "Tickets are not available for this work request",
+                          });
+                          handleClearTicket();
+                          // setTimeout(() => window.location.reload(), 1000);
+                          // navigate("/acs_razor");
+                          dispatch(setIsJobRequestOpen(true));
+                        }
+
+                        const startTime = new Date().toISOString();
+                        sessionStorage.setItem("ticket_start_time", startTime);
+
+                        dispatch(setTicketData(ticketData.response.data));
+                      },
+                      onError: (ticketError) => {
+                        console.error(
+                          "Error in ticket mutation (getTicket):",
+                          ticketError
+                        );
+                      },
+                    });
+
+                    setJobType("");
+                    setTicketType("");
+                  }
+                },
+                onError: (error) => {
+                  console.log("Error fetching work request:", error);
+                },
+              }
+            );
           },
         }
       );
@@ -208,7 +251,7 @@ export function InitialLoadJobModal() {
                       <SelectItem value="parser">Parser</SelectItem>
                       <SelectItem value="spix">Spix</SelectItem>
                       <SelectItem value="package_validation">
-                        Package Validationssue
+                        Package Validation
                       </SelectItem>
                     </SelectGroup>
                   </SelectContent>
