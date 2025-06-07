@@ -69,3 +69,8 @@ export const getLogFile = async (data: any) => {
   const res = await axiosInstance.post(`/xml/getLogFile`, data);
   return res.data;
 };
+
+export const ticketTimeExtendUpdate = async (data: any) => {
+  const res = await axiosInstance.post(`/xml/ticket_time_extend_update`, data);
+  return res.data;
+};

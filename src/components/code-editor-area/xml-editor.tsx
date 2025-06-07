@@ -29,8 +29,8 @@ import {
   syntaxHighlighting,
 } from "@codemirror/language";
 import { lintGutter } from "@codemirror/lint";
-import { navigateToLine } from "./code-mirror-pulgins/navigation-cursor";
 import { clearNavigationTarget } from "@/features/error-navigation-slice";
+import { navigateToLine } from "./code-mirror-pulgins/navigation-cursor";
 
 type XmlEditorProps = {
   xmlContent?: string;

@@ -82,17 +82,17 @@ const ItemListDisplay = ({
       </div>
       <div
         className={cn(
-          `transition-all overflow-auto duration-300 ease-in-out rounded-md pr-3`,
+          `transition-all overflow-auto duration-300 ease-in-out  pr-3`,
           isExpanded ? `max-h-[250px]` : "max-h-0"
         )}
       >
         {Object.entries(items).map(([itemKey, itemValue]) => (
           <div
             key={itemKey}
-            className="mb-2 p-1 rounded bg-white shadow-sm text-xs"
+            className="mb-2 p-1 rounded-md bg-red-100  border-red-600 border-l-4 shadow-sm text-xs"
             onClick={() => handleNavigateClick(String(itemValue))}
           >
-            <p className="text-gray-800 break-all">{String(itemValue)}</p>
+            <p className="text-red-600 break-all">{String(itemValue)}</p>
           </div>
         ))}
       </div>

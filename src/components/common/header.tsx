@@ -1,4 +1,4 @@
-import { Loader, LogOutIcon, TimerIcon, UserIcon } from "lucide-react";
+import { AlarmClockPlus, Loader, LogOutIcon, UserIcon } from "lucide-react";
 import moment from "moment";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,33 +11,29 @@ import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
 
 import { useUserDetails } from "@/auth/straive-auth";
 import { JobInfoPopover } from "../custom-ui/job-info-popover";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  getTicket,
-  getXml,
-  saveTicket,
-  updateTicket,
-  validateParser,
-  validateSpix,
-} from "@/apis/api";
+import { useMutation } from "@tanstack/react-query";
+import { getTicket, saveTicket, updateTicket } from "@/apis/api";
 import { encode } from "js-base64";
 import { toast } from "sonner";
 import { handleClearTicket } from "@/utils/clear-ticket";
 import Razor_Logo from "../../assets/logos/RAZOR_slogo.png";
 import { setIsJobRequestOpen } from "@/features/job-slice";
 import { setTicketData } from "@/features/ticket-slice";
-import { updateXmlContent } from "@/features/xml-slice";
-import { useGetXml } from "@/hooks/xml-hooks";
-import { useValidateParser, useValidateSpix } from "@/hooks/errors-hook";
-import { useGetLogFile } from "@/hooks/log-hooks";
+
+import {
+  useValidateParser,
+  useValidateSpix,
+} from "@/hooks/api-hooks/errors-hook";
+import { useGetLogFile } from "@/hooks/api-hooks/log-hooks";
 import { setParserLogError, setSpixLogError } from "@/features/error-slice";
+
+import { Timer } from "@/helper/Timer";
 
 const Header = () => {
   const dispatch = useAppDispatch();
 
   const ticket = useAppSelector((state) => state.ticket);
   const xmlContent = useAppSelector((state) => state.xml.xmlContent);
-  const xmlPath = ticket?.job_info?.xml_path;
 
   const user = useUserDetails();
 
@@ -229,14 +225,12 @@ const Header = () => {
       );
     };
 
-    // 4. Define the mutation to call and its specific payload.
     const isParser = ticketType === "parser";
     const mutationFn = isParser ? parserMutate : spixMutate;
     const payload = isParser
       ? { xml: xmlPath }
       : { xml: xmlPath, clientName: "ACSCM", stage: "ED" };
 
-    // 5. Execute the mutation with the payload and the shared success handler.
     mutationFn(payload, { onSuccess: (data) => handleMutationSuccess(data) });
   };
 
@@ -268,9 +262,9 @@ const Header = () => {
             </Button>
             {/* </TooltipTrigger>
               <TooltipContent>
-                <p>Validate</p>
+              <p>Validate</p>
               </TooltipContent>
-            </Tooltip> */}
+              </Tooltip> */}
           </>
         )}
 
@@ -279,13 +273,17 @@ const Header = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size={"icon"}>
-                  <TimerIcon />
+                  <AlarmClockPlus name="Time Extend" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Extend time (WIP)</p>
               </TooltipContent>
             </Tooltip>
+
+            <Button variant={"outline"} className="w-12">
+              <Timer initialSeconds={+ticket.job_info.ticket_timeout} />
+            </Button>
 
             <Button variant="outline" onClick={handleSave} disabled={isPending}>
               {isPending ? (

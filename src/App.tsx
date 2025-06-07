@@ -12,7 +12,7 @@ import { setTicketData } from "./features/ticket-slice";
 import { toast } from "sonner";
 import { handleClearTicket } from "./utils/clear-ticket";
 import { setIsJobRequestOpen } from "./features/job-slice";
-import { useGetXml } from "./hooks/xml-hooks";
+import { useGetXml } from "./hooks/api-hooks/xml-hooks";
 
 function App() {
   const user = useUserDetails();

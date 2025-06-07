@@ -5,8 +5,7 @@ import {
 } from "@/utils/custom-function";
 import ItemListDisplay from "../custom/items-list-display";
 import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
-import { getConversionLog, getLogFile } from "@/apis/api";
-import { useMutation, useQuery } from "@tanstack/react-query";
+
 import { useEffect } from "react";
 import {
   setConversionLog,
@@ -15,7 +14,10 @@ import {
 } from "@/features/error-slice";
 import { toast } from "sonner";
 import { AccordionSkeleton } from "../custom-ui/skeleton/accordian-skeleton";
-import { useConversionLogFile, useGetLogFile } from "@/hooks/log-hooks";
+import {
+  useConversionLogFile,
+  useGetLogFile,
+} from "@/hooks/api-hooks/log-hooks";
 
 type FinalResultObject = {
   [key: string]: Record<string, unknown> | undefined;
@@ -27,8 +29,6 @@ const RightSidebar = () => {
   const { spixLogError, parserLogError, conversionLogError } = useAppSelector(
     (state) => state.xmlErrors
   );
-
-  console.log("spi", spixLogError, parserLogError);
 
   const dispatch = useAppDispatch();
   const ticket = useAppSelector((state) => state.ticket);
@@ -50,7 +50,6 @@ const RightSidebar = () => {
         },
         {
           onSuccess: (data) => {
-            // console.log(data);
             if (ticketType === "spix") {
               dispatch(setSpixLogError(data));
             } else {
