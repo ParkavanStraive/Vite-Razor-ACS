@@ -6,6 +6,7 @@ import {
 } from "@/types/payload.types";
 import {
   getTokenResponseType,
+  ParserResponseType,
   TicketResponseType,
   WorkRequestResponseType,
 } from "@/types/response.types";
@@ -52,7 +53,9 @@ export const updateTicket = async (data: any) => {
   return res.data;
 };
 
-export const validateParser = async (data: any) => {
+export const validateParser = async (
+  data: any
+): Promise<ParserResponseType> => {
   const res = await axiosInstance.post(`/xml/validate/parser`, data);
   return res.data;
 };

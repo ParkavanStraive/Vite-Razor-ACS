@@ -6,12 +6,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { useAppSelector } from "@/redux-store/hook";
+import { useAppDispatch, useAppSelector } from "@/redux-store/hook";
 
 import { useUserDetails } from "@/auth/straive-auth";
 import { JobInfoPopover } from "../custom-ui/job-info-popover";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  getTicket,
+  getXml,
   saveTicket,
   updateTicket,
   validateParser,
@@ -21,12 +23,37 @@ import { encode } from "js-base64";
 import { toast } from "sonner";
 import { handleClearTicket } from "@/utils/clear-ticket";
 import Razor_Logo from "../../assets/logos/RAZOR_slogo.png";
+import { setIsJobRequestOpen } from "@/features/job-slice";
+import { setTicketData } from "@/features/ticket-slice";
+import { updateXmlContent } from "@/features/xml-slice";
+import { useGetXml } from "@/hooks/xml-hooks";
+import { useValidateParser, useValidateSpix } from "@/hooks/errors-hook";
+import { useGetLogFile } from "@/hooks/log-hooks";
+import { setParserLogError, setSpixLogError } from "@/features/error-slice";
 
 const Header = () => {
+  const dispatch = useAppDispatch();
+
   const ticket = useAppSelector((state) => state.ticket);
+  const xmlContent = useAppSelector((state) => state.xml.xmlContent);
+  const xmlPath = ticket?.job_info?.xml_path;
+
   const user = useUserDetails();
 
-  // const xmlPath = ticket?.job_info?.xml_path;
+  const jobType = sessionStorage.getItem("job_type");
+  const work_request_id = sessionStorage.getItem("work_request_id");
+  const ticketType = sessionStorage.getItem("ticket_type");
+
+  // const {
+  //   data: xmlData,
+  //   isPending: xmlIsPending,
+  //   isSuccess: xmlIsSuccess,
+  //   error: xmlError,
+  //   isError: xmlIsError,
+  // } = useGetXml(xmlPath, ticket, work_request_id ?? "");
+
+  const { mutate: logFileMutate, isPending: isLogFilePending } =
+    useGetLogFile();
 
   const { mutate: updateXmlMutate, isPending: isXmlPending } = useMutation({
     mutationFn: updateTicket,
@@ -35,24 +62,34 @@ const Header = () => {
 
   const { mutate: saveXmlMutate, isPending } = useMutation({
     mutationFn: saveTicket,
-    mutationKey: ["updateXml"],
+    mutationKey: ["saveXml"],
   });
 
   const { mutate: parserMutate, isPending: isParserValidatePending } =
-    useMutation({
-      mutationFn: validateParser,
-      mutationKey: ["validateParser"],
-    });
+    useValidateParser(xmlPath);
+  //   {
+  //   mutationFn: validateParser,
+  //   mutationKey: ["validateParser"],
+  //   onSuccess: (data) => {
+  //     if (data.status === "0") {
+  //       toast("Parser Validation", {
+  //         description: "Error still persists, please fix the XML",
+  //       });
+  //     } else {
+  //       toast("Parser Validation", {
+  //         description: "The XML file has been validated successfully",
+  //       });
+  //     }
+  //   },
+  // }
 
-  const { mutate: spixMutate, isPending: isSpixValidatePending } = useMutation({
-    mutationFn: validateSpix,
-    mutationKey: ["validateSpix"],
-  });
+  const { mutate: spixMutate, isPending: isSpixValidatePending } =
+    useValidateSpix();
 
-  const work_request_id = sessionStorage.getItem("work_request_id");
-  const ticketType = sessionStorage.getItem("ticket_type");
-
-  const xmlContent = useAppSelector((state) => state.xml.xmlContent);
+  // const { mutate: ticketMutate } = useMutation({
+  //   mutationFn: getTicket,
+  //   mutationKey: ["getTicket"],
+  // });
 
   const onSubmitHandler = () => {
     const xmlBase64 = encode(xmlContent);
@@ -91,6 +128,31 @@ const Header = () => {
                 toast("Ticket Status", {
                   description: "Ticket has been submitted",
                 });
+
+                // ticketMutate(
+                //   {
+                //     user_id: user?.username,
+                //     email: user?.username,
+                //     work_request_id: work_request_id ?? "",
+                //     job_type: jobType ?? "",
+                //     ticket_type: ticketType ?? "",
+                //   },
+                //   {
+                //     onSuccess: (data) => {
+                //       if (data) {
+                //         if (data.response.request_status === "2") {
+                //           toast("Ticket Status", {
+                //             description:
+                //               "Tickets are not available for this work request",
+                //           });
+                //           handleClearTicket();
+                //           dispatch(setIsJobRequestOpen(true));
+                //         }
+                //         dispatch(setTicketData(data.response.data));
+                //       }
+                //     },
+                //   }
+                // );
               },
               onError: () => {
                 toast("Ticket Status", {
@@ -135,28 +197,42 @@ const Header = () => {
 
   const handleValidate = () => {
     const ticketType = sessionStorage.getItem("ticket_type");
+    const xmlPath = ticket.job_info.xml_path;
 
-    if (ticketType === "parser") {
-      parserMutate(
+    // 1. Create a single, reusable success handler for both mutations.
+    const handleMutationSuccess = (data: { status: string }) => {
+      const isSuccess = data.status !== "0";
+      const toastDescription = isSuccess
+        ? "The XML file has been validated successfully"
+        : "Error still persists, please fix the XML";
+
+      toast("Parser Validation", { description: toastDescription });
+
+      // 2. The log file mutation is always called, so it lives here.
+      logFileMutate(
+        { xml: xmlPath, logType: ticketType },
         {
-          xml: ticket.job_info.xml_path,
-        },
-        {
-          onSuccess: () => {},
+          onSuccess: (logData) => {
+            // 3. Use the ticketType variable we already have.
+            const action =
+              ticketType === "spix"
+                ? setSpixLogError(logData)
+                : setParserLogError(logData);
+            dispatch(action);
+          },
         }
       );
-    } else {
-      spixMutate(
-        {
-          xml: ticket.job_info.xml_path,
-          clientName: "ACS",
-          stage: "ED",
-        },
-        {
-          onSuccess: () => {},
-        }
-      );
-    }
+    };
+
+    // 4. Define the mutation to call and its specific payload.
+    const isParser = ticketType === "parser";
+    const mutationFn = isParser ? parserMutate : spixMutate;
+    const payload = isParser
+      ? { xml: xmlPath }
+      : { xml: xmlPath, clientName: "ACSCM", stage: "ED" };
+
+    // 5. Execute the mutation with the payload and the shared success handler.
+    mutationFn(payload, { onSuccess: (data) => handleMutationSuccess(data) });
   };
 
   return (

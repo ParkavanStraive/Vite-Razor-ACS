@@ -15,6 +15,7 @@ import {
 } from "@/features/error-slice";
 import { toast } from "sonner";
 import { AccordionSkeleton } from "../custom-ui/skeleton/accordian-skeleton";
+import { useConversionLogFile, useGetLogFile } from "@/hooks/log-hooks";
 
 type FinalResultObject = {
   [key: string]: Record<string, unknown> | undefined;
@@ -35,10 +36,8 @@ const RightSidebar = () => {
   const work_request_id = sessionStorage.getItem("work_request_id");
   const ticketType = sessionStorage.getItem("ticket_type");
 
-  const { mutate: logFileMutate, isPending: isLogFilePending } = useMutation({
-    mutationFn: getLogFile,
-    mutationKey: ["getLogFile"],
-  });
+  const { mutate: logFileMutate, isPending: isLogFilePending } =
+    useGetLogFile();
 
   useEffect(() => {
     if (xmlPath && work_request_id) {
@@ -67,21 +66,7 @@ const RightSidebar = () => {
     isSuccess: logIsSuccess,
     error: logError,
     isError: logIsError,
-  } = useQuery({
-    queryKey: ["getConversionLog", conversionLogPath],
-    queryFn: () => {
-      if (!conversionLogPath) {
-        return Promise.reject(new Error("conversionLogPath is not defined"));
-      }
-      return getConversionLog(conversionLogPath);
-    },
-    enabled: !!(
-      ticket?.job_info &&
-      work_request_id &&
-      conversionLogPath &&
-      ticketType === "xml_conversion"
-    ),
-  });
+  } = useConversionLogFile({ conversionLogPath, ticketType, work_request_id });
 
   useEffect(() => {
     if (logIsSuccess && conversionLogData) {

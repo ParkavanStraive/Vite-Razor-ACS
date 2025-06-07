@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-interface ITicketType {
+export interface ITicketType {
   job_info: {
     job_id: string;
     job_type: string;

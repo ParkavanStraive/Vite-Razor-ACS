@@ -37,3 +37,9 @@ interface ApiResponse {
 export interface TicketResponseType {
   response: ApiResponse;
 }
+
+export interface ParserResponseType {
+  status: string;
+  remarks: string;
+  current_process: string;
+}
