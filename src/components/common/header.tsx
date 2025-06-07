@@ -1,4 +1,5 @@
 import { Loader, LogOutIcon, TimerIcon, UserIcon } from "lucide-react";
+import moment from "moment";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -66,7 +67,7 @@ const Header = () => {
   });
 
   const { mutate: parserMutate, isPending: isParserValidatePending } =
-    useValidateParser(xmlPath);
+    useValidateParser();
   //   {
   //   mutationFn: validateParser,
   //   mutationKey: ["validateParser"],
@@ -86,10 +87,10 @@ const Header = () => {
   const { mutate: spixMutate, isPending: isSpixValidatePending } =
     useValidateSpix();
 
-  // const { mutate: ticketMutate } = useMutation({
-  //   mutationFn: getTicket,
-  //   mutationKey: ["getTicket"],
-  // });
+  const { mutate: ticketMutate } = useMutation({
+    mutationFn: getTicket,
+    mutationKey: ["getTicket"],
+  });
 
   const onSubmitHandler = () => {
     const xmlBase64 = encode(xmlContent);
@@ -105,8 +106,14 @@ const Header = () => {
             description: "Ticket has been saved",
           });
 
-          const endTime = new Date().toISOString();
-          sessionStorage.setItem("ticket_end_time", endTime);
+          const startTimeString = sessionStorage.getItem("ticket_start_time");
+          const startTime = moment(startTimeString);
+
+          const endTime = moment();
+
+          sessionStorage.setItem("ticket_end_time", endTime.toISOString());
+
+          const elapsedTimeInSeconds = endTime.diff(startTime, "seconds");
 
           updateXmlMutate(
             {
@@ -114,9 +121,9 @@ const Header = () => {
               work_request_id: work_request_id,
               ticket_time_extend: "1",
               status: "completed",
-              ticket_start_time: "2025-06-04 12:58:32",
-              ticket_end_time: "2025-06-04 12:59:32",
-              ticket_elapsed_time: "100",
+              ticket_start_time: startTime.format("YYYY-MM-DD HH:mm:ss"),
+              ticket_end_time: endTime.format("YYYY-MM-DD HH:mm:ss"),
+              ticket_elapsed_time: elapsedTimeInSeconds.toString(),
               remarks: "remarks",
               waiting_time: "0",
               conversion_time: "0",
@@ -129,30 +136,31 @@ const Header = () => {
                   description: "Ticket has been submitted",
                 });
 
-                // ticketMutate(
-                //   {
-                //     user_id: user?.username,
-                //     email: user?.username,
-                //     work_request_id: work_request_id ?? "",
-                //     job_type: jobType ?? "",
-                //     ticket_type: ticketType ?? "",
-                //   },
-                //   {
-                //     onSuccess: (data) => {
-                //       if (data) {
-                //         if (data.response.request_status === "2") {
-                //           toast("Ticket Status", {
-                //             description:
-                //               "Tickets are not available for this work request",
-                //           });
-                //           handleClearTicket();
-                //           dispatch(setIsJobRequestOpen(true));
-                //         }
-                //         dispatch(setTicketData(data.response.data));
-                //       }
-                //     },
-                //   }
-                // );
+                ticketMutate(
+                  {
+                    user_id: user?.username,
+                    email: user?.username,
+                    work_request_id: work_request_id ?? "",
+                    job_type: jobType ?? "",
+                    ticket_type: ticketType ?? "",
+                  },
+                  {
+                    onSuccess: (data) => {
+                      if (data) {
+                        if (data.response.request_status === "2") {
+                          toast("Ticket Status", {
+                            description:
+                              "Tickets are not available for this work request",
+                          });
+                          handleClearTicket();
+                          dispatch(setIsJobRequestOpen(true));
+                          return;
+                        }
+                        dispatch(setTicketData(data.response.data));
+                      }
+                    },
+                  }
+                );
               },
               onError: () => {
                 toast("Ticket Status", {
@@ -199,7 +207,6 @@ const Header = () => {
     const ticketType = sessionStorage.getItem("ticket_type");
     const xmlPath = ticket.job_info.xml_path;
 
-    // 1. Create a single, reusable success handler for both mutations.
     const handleMutationSuccess = (data: { status: string }) => {
       const isSuccess = data.status !== "0";
       const toastDescription = isSuccess
@@ -208,12 +215,10 @@ const Header = () => {
 
       toast("Parser Validation", { description: toastDescription });
 
-      // 2. The log file mutation is always called, so it lives here.
       logFileMutate(
         { xml: xmlPath, logType: ticketType },
         {
           onSuccess: (logData) => {
-            // 3. Use the ticketType variable we already have.
             const action =
               ticketType === "spix"
                 ? setSpixLogError(logData)
@@ -239,33 +244,34 @@ const Header = () => {
     <div className="flex items-center justify-between h-full p-2">
       <div className="flex items-center justify-between gap-2 p-2">
         <div className="w-[80px] h-[50] rounded-md drop-shadow-2xl bg-white border flex items-center justify-center">
-          {/* <h1 className="text-2xl font-bold">Razor-ACS</h1> */}
           <img src={Razor_Logo} alt="#Razor_Logo" width={90} />
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
         {(ticketType === "parser" || ticketType === "spix") && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={handleValidate}
-                disabled={isParserValidatePending || isSpixValidatePending}
-              >
-                {isParserValidatePending || isSpixValidatePending ? (
-                  <>
-                    <Loader className="animate-spin" /> Validating...
-                  </>
-                ) : (
-                  "Validate"
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Validate (WIP)</p>
-            </TooltipContent>
-          </Tooltip>
+          <>
+            {/* <Tooltip>
+              <TooltipTrigger asChild> */}
+            <Button
+              variant="outline"
+              onClick={handleValidate}
+              disabled={isParserValidatePending || isSpixValidatePending}
+            >
+              {isParserValidatePending || isSpixValidatePending ? (
+                <>
+                  <Loader className="animate-spin" /> Validating...
+                </>
+              ) : (
+                <p>Validate</p>
+              )}
+            </Button>
+            {/* </TooltipTrigger>
+              <TooltipContent>
+                <p>Validate</p>
+              </TooltipContent>
+            </Tooltip> */}
+          </>
         )}
 
         {ticket?.job_info?.job_id && ticket?.job_info?.ticket_id && (

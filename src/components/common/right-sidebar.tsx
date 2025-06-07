@@ -28,6 +28,8 @@ const RightSidebar = () => {
     (state) => state.xmlErrors
   );
 
+  console.log("spi", spixLogError, parserLogError);
+
   const dispatch = useAppDispatch();
   const ticket = useAppSelector((state) => state.ticket);
   const conversionLogPath = ticket?.job_info?.conversion_log_path;
@@ -58,7 +60,7 @@ const RightSidebar = () => {
         }
       );
     }
-  }, [xmlPath && work_request_id]);
+  }, [xmlPath, work_request_id, dispatch]);
 
   const {
     data: conversionLogData,
@@ -83,8 +85,6 @@ const RightSidebar = () => {
   }, [logIsError, logError]);
 
   const extParserLogError = extractData_parser(parserLogError.split("\n"));
-
-  console.log("parserLogError", extParserLogError);
 
   const extConversionLog = conversionLogError
     .split("\n")
